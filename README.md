@@ -1,4 +1,4 @@
-# SkilLab-SoftwareArchitecture - Investigation Service
+# Pulse-Patrol - Investigation Service
 
 ## 🏥 Project Overview
 The **Investigation Service** is a high-performance backend component developed as part of the SkilLab Software Architecture course. It acts as the bridge between on-premise medical hardware and the AWS Cloud-native ecosystem, ensuring efficient telemetry ingestion and clinical alert management.
@@ -31,3 +31,18 @@ pulse-patrol/
 │   └── integration-test.go         # End-to-end integration tests
 ├── go.mod                          # Go module dependencies
 └── README.md                       # Project documentation
+```  
+## 🏗 Howto run the project
+### Start the HTTP Web Server on port 8080
+```bash
+go run cmd/investigation-service/main.go
+``` 
+### Start the HTTP Web Clients 
+```bash
+go run scripts/request_tester/main.go
+``` 
+
+### Execute WRK tests
+```bash
+wrk -t2 -c100 -d30s -s scripts/post_payload.lua http://localhost:8080/v1/telemetry
+````
