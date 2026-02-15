@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package investigation;
+
+// The service definition.
+service InvestigationService {
+  // Sends a critical alert to the Clinical Orchestrator.
+  rpc SendAlert (AlertRequest) returns (AlertResponse);
+}
+
+// The request message containing the alert details.
+message AlertRequest {
+  string patient_id = 1;
+  string alert_type = 2; // e.g., "Tachycardia", "Low Oxygen"
+  int32 current_value = 3;
+}
+
+// The response message from the server.
+// This must be defined for the RPC to work.
+message AlertResponse {
+  string status = 1;      // e.g., "Success"
+  string tracking_id = 2; // Unique ID for the audit log
+}
