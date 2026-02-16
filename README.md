@@ -46,3 +46,13 @@ go run scripts/request_tester/main.go
 ```bash
 wrk -t2 -c100 -d30s -s scripts/post_payload.lua http://localhost:8080/v1/telemetry
 ````
+### Start the gRPC Server on port 50051
+```bash
+go run cmd/investigation-service/main-grpc.go
+``` 
+### Start the HTTP Web Clients
+```bash
+go run scripts/request_tester/tester-grpc.go
+```
+
+

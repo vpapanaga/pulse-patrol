@@ -1,23 +1,30 @@
+// investigation.proto
+// This file defines the gRPC service contract for the Investigation Service.
+// It facilitates high-speed internal communication as required by NFR33.
+
 syntax = "proto3";
 
 package investigation;
 
-// The service definition.
+// The proto package path for Go code generation
+option go_package = "pulse-patrol/api/proto";
+
+// InvestigationService handles internal clinical signals and alerts.
 service InvestigationService {
-  // Sends a critical alert to the Clinical Orchestrator.
+  // SendAlert transmits a critical patient condition to the Clinical Orchestrator.
+  // This call is designed to be low-latency to satisfy real-time monitoring needs.
   rpc SendAlert (AlertRequest) returns (AlertResponse);
 }
 
-// The request message containing the alert details.
+// AlertRequest encapsulates the patient's condition and vital sign data.
 message AlertRequest {
-  string patient_id = 1;
-  string alert_type = 2; // e.g., "Tachycardia", "Low Oxygen"
-  int32 current_value = 3;
+  string patient_id = 1;    // Unique identifier for the patient
+  string alert_type = 2;    // Category of alert (e.g., TACHYCARDIA, BRADYCARDIA)
+  int32 current_value = 3;  // The actual sensor value that triggered the alert
 }
 
-// The response message from the server.
-// This must be defined for the RPC to work.
+// AlertResponse provides confirmation of the alert processing.
 message AlertResponse {
-  string status = 1;      // e.g., "Success"
-  string tracking_id = 2; // Unique ID for the audit log
+  string status = 1;        // Status of the request (e.g., RECEIVED, PROCESSED)
+  string tracking_id = 2;   // Unique ID used for the Shadow Audit log (ADR #02)
 }
