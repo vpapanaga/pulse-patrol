@@ -40,8 +40,7 @@ go run cmd/investigation-service/main.go
 ### Start the HTTP Web Clients 
 ```bash
 go run scripts/request_tester/main.go
-``` 
-
+```
 ### Execute WRK tests
 ```bash
 wrk -t2 -c100 -d30s -s scripts/post_payload.lua http://localhost:8080/v1/telemetry
@@ -50,9 +49,25 @@ wrk -t2 -c100 -d30s -s scripts/post_payload.lua http://localhost:8080/v1/telemet
 ```bash
 go run cmd/investigation-service/main-grpc.go
 ``` 
-### Start the HTTP Web Clients
+### Start the gRPC Client
 ```bash
 go run scripts/request_tester/tester-grpc.go
 ```
+### Execute Bench tests with gRPC
+```bash
+go run scripts/request_tester/bench_grpc.go
+````
+### Execute Bench tests with ghz
 
+#### Install the ghz application 
+```bash
+# MacOS
+brew install ghz
+# Go Install
+go install github.com/bojand/ghz/cmd/ghz@latest
+````
+#### Run the tests
+```bash
+ghz --insecure --proto ./api/proto/investigation.proto --call investigation.InvestigationService.SendAlert --data '{"patient_id": "GHZ-001", "alert_type": "LOAD_TEST", "current_value": 95}' -n 1000 -c 50 localhost:50051
+````
 
