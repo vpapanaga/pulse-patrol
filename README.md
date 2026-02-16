@@ -70,4 +70,12 @@ go install github.com/bojand/ghz/cmd/ghz@latest
 ```bash
 ghz --insecure --proto ./api/proto/investigation.proto --call investigation.InvestigationService.SendAlert --data '{"patient_id": "GHZ-001", "alert_type": "LOAD_TEST", "current_value": 95}' -n 1000 -c 50 localhost:50051
 ````
-
+## Using the dockerized container
+### Create the local container
+```bash
+docker build -t pulse-patrol-investigation -f deployment/Dockerfile .
+````
+### Execute the container
+```bash
+docker run -p 8080:8080 -p 50051:50051 pulse-patrol-investigation
+````

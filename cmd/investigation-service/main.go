@@ -1,26 +1,36 @@
-// Package main is the entry point for the investigation microservice.
-// It configures the servers and routes required for the service to function within the AWS ecosystem.
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/vpapanaga/pulse-patrol/internal/app"
-	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
-	// Register the primary route for telemetry ingestion.
-	// The handler is imported from internal/app to keep the private business logic protected.
+	// 1. Define a flag for health check mode
+	isCheck := flag.Bool("check", false, "Run in health check mode")
+	flag.Parse()
+
+	// 2. If in check mode, perform the ping and exit
+	if *isCheck {
+		resp, err := http.Get("http://localhost:8080/health")
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1) // Docker interprets non-zero as UNHEALTHY
+		}
+		os.Exit(0) // Docker interprets zero as HEALTHY
+	}
+
+	// 3. Normal Server Startup
 	http.HandleFunc("/v1/telemetry", app.TelemetryHandler)
 
-	fmt.Println("🏥 Pulse Patrol - Investigation Service")
-	fmt.Println("📡 HTTP Ingestion Server active on port :8080")
-	fmt.Println("---------------------------------------------------")
+	// Add the health endpoint for the orchestrator/Docker to hit
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
 
-	// Start the blocking HTTP server. In production (AWS Fargate),
-	// this server is typically monitored by an Application Load Balancer (ALB).
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatalf("Critical error starting the server: %v", err)
-	}
+	fmt.Println("🏥 Pulse Patrol - Investigation Service Active")
+	http.ListenAndServe(":8080", nil)
 }
