@@ -3,30 +3,39 @@ package main
 
 import (
 	"fmt"
-	pb "github.com/vpapanaga/pulse-patrol/api/proto"
-	"github.com/vpapanaga/pulse-patrol/internal/app"
-	"google.golang.org/grpc"
 	"log"
 	"net"
+
+	pb "github.com/vpapanaga/pulse-patrol/api/proto"
+	"github.com/vpapanaga/pulse-patrol/internal/app"
+	"github.com/vpapanaga/pulse-patrol/internal/config" // Import your config package
+	"google.golang.org/grpc"
 )
 
 func main() {
-	// Listen on TCP port 50051
-	lis, err := net.Listen("tcp", ":50051")
+	// 1. Initialize configuration from .env or environment variables
+	config.LoadConfig()
+
+	// 2. Retrieve the gRPC port from config, default to 50051 if not set
+	// This matches the externalization strategy used in the REST service
+	port := config.GetEnv("GRPC_PORT", "50051")
+
+	// 3. Establish a TCP listener on the configured port
+	lis, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("Failed to listen on port 50051: %v", err)
+		log.Fatalf("Failed to listen on gRPC port %s: %v", port, err)
 	}
 
-	// Create a new gRPC server instance
+	// 4. Create a new gRPC server instance
 	s := grpc.NewServer()
 
-	// Register our implementation with the gRPC server
-
+	// 5. Register the Investigation Service implementation with the gRPC server
 	pb.RegisterInvestigationServiceServer(s, &app.GRPCServer{})
 
 	fmt.Println("🏥 Pulse Patrol - Investigation Service")
-	fmt.Println("⚡ gRPC Server active on port :50051")
+	fmt.Printf("⚡ gRPC Server active on port :%s\n", port)
 
+	// 6. Start the gRPC server and block until the process is terminated
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve gRPC: %v", err)
 	}

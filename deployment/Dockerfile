@@ -1,38 +1,43 @@
-# --- Stage 1: Build stage ---
-# Using Go 1.25 as requested
-FROM golang:1.25-alpine AS builder
+# STEP 1: Build Stage
+FROM golang:1.25.5-alpine AS builder
 
-# Install ca-certificates in the builder stage
-# We will need to copy these to scratch if the app makes HTTPS calls
-RUN apk add --no-cache ca-certificates git
-
+# Set the working directory inside the container
 WORKDIR /app
 
-# Handle dependencies
+# Copy dependency files first for better layer caching
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
+# Copy the source code
 COPY . .
 
-# Compile a STATIC binary
-# CGO_ENABLED=0: Disables C-library linking (crucial for scratch)
-# -ldflags="-w -s": Strips debug info and symbol tables to reduce size
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o main ./cmd/investigation-service/main.go
+# Build the binary
+# CGO_ENABLED=0 ensures a static binary for a smaller, more portable image
+RUN CGO_ENABLED=0 GOOS=linux go build -o investigation-service ./cmd/investigation-service/main.go
 
-# --- Stage 2: Final stage (Ultra-minimal) ---
-# ... [Previous builder stages] ...
+# STEP 2: Final Run Stage
+FROM alpine:latest
 
-FROM scratch
+WORKDIR /root/
 
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=builder /app/main /main
+# Install ca-certificates in case the service makes HTTPS calls
+RUN apk --no-cache add ca-certificates
 
-# Define the health check using the binary's own flag
-# Interval: check every 30s | Timeout: fail if it takes > 5s
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 CMD ["/main", "-check"]
+# Copy the binary from the builder stage
+COPY --from=builder /app/investigation-service .
 
+# Copy the .env file (Optional: usually injected via Docker Compose or K8s)
+# COPY .env .
+
+# EXPOSE is documented but overridden by the REST_PORT environment variable
 EXPOSE 8080
-EXPOSE 50051
 
-ENTRYPOINT ["/main"]
+# HEALTHCHECK instruction uses the internal flag we just implemented
+# --interval: how often to check
+# --timeout: how long to wait for a response
+# --retries: number of failures before marking as UNHEALTHY
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD ./investigation-service --check
+
+# Start the application
+CMD ["./investigation-service"]
