@@ -1,43 +1,45 @@
 # STEP 1: Build Stage
 FROM golang:1.25.5-alpine AS builder
 
-# Set the working directory inside the container
+# Install necessary build tools
+RUN apk add --no-cache git
+
 WORKDIR /app
 
-# Copy dependency files first for better layer caching
+# Cache dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the source code
+# Copy source code
 COPY . .
 
-# Build the binary
-# CGO_ENABLED=0 ensures a static binary for a smaller, more portable image
-RUN CGO_ENABLED=0 GOOS=linux go build -o investigation-service ./cmd/investigation-service/main.go
+# Build the provisioning binary
+# Using CGO_ENABLED=0 for a purely static binary
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o provisioning-service ./cmd/provisioning/main.go
 
-# STEP 2: Final Run Stage
+# STEP 2: Runtime Stage
 FROM alpine:latest
 
-WORKDIR /root/
+# Security: HIPAA/NFR36 compliance using non-root user
+RUN adduser -D pulseuser
+WORKDIR /home/pulseuser/
 
-# Install ca-certificates in case the service makes HTTPS calls
+# Install CA certificates for secure DB connections
 RUN apk --no-cache add ca-certificates
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/investigation-service .
+# Copy the binary from the builder
+COPY --from=builder /app/provisioning-service .
 
-# Copy the .env file (Optional: usually injected via Docker Compose or K8s)
-# COPY .env .
+# Port Documentation
+# The service will use the REST_PORT defined in your .env
+EXPOSE 8081
 
-# EXPOSE is documented but overridden by the REST_PORT environment variable
-EXPOSE 8080
+USER pulseuser
 
-# HEALTHCHECK instruction uses the internal flag we just implemented
-# --interval: how often to check
-# --timeout: how long to wait for a response
-# --retries: number of failures before marking as UNHEALTHY
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD ./investigation-service --check
+# HEALTHCHECK: Verify service availability on the assigned port
+# Uses wget (built-in Alpine) to check the /health endpoint
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8081/health || exit 1
 
-# Start the application
-CMD ["./investigation-service"]
+# Launch the service
+ENTRYPOINT ["./provisioning-service"]

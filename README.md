@@ -79,3 +79,18 @@ docker build -t pulse-patrol-investigation -f deployment/Dockerfile .
 ```bash
 docker run -p 8080:8080 -p 50051:50051 pulse-patrol-investigation
 ````
+# Laborator 7 - Workshop Telemetry and performance tests
+## Build and start
+```bash
+docker compose up -d --build
+````
+## Performance Testing 
+### Using WRK
+```bash
+./scripts/run_bench.sh
+````
+
+## Cleanup the volume and container 
+```bash
+docker compose down -v
+````

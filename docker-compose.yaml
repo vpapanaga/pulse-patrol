@@ -1,31 +1,12 @@
-services:
-  investigation-service:
-    build:
-      context: .
-      dockerfile: deployment/Dockerfile
-    # This line tells Docker Compose to load variables from your file
-    env_file:
-      - ./.env
-    ports:
-      - "${REST_PORT:-8080}:${REST_PORT:-8080}"
-      - "${GRPC_PORT:-50051}:${GRPC_PORT:-50051}"
-    environment:
-      # We override the Host to use the internal Docker network name 'db'
-      - DB_HOST=db
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME}
-    depends_on:
-      db:
-        condition: service_healthy
+version: '3.8'
 
+services:
+  # DATABASE: PostgreSQL with Auto-Initialization from scripts/
   db:
     image: postgres:15-alpine
     container_name: pulse-patrol-database
-    # DB also needs the variables to initialize the user/pass/db name
     env_file:
-      - ./.env
+      - .env
     ports:
       - "${DB_PORT:-5432}:5432"
     environment:
@@ -33,13 +14,32 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     volumes:
+      # UPDATED PATH: Mounts the schema from your scripts folder
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
+
+  # PROVISIONING SERVICE: Benchmark Target
+  provisioning-service:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile
+    container_name: pulse-provisioning
+    env_file:
+      - .env
+    ports:
+      - "${REST_PORT:-8090}:${REST_PORT:-8090}"
+    environment:
+      - DB_HOST=db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: on-failure
 
 volumes:
   postgres_data:
