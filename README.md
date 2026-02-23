@@ -87,7 +87,11 @@ docker compose up -d --build
 ## Performance Testing 
 ### Using WRK
 ```bash
-./scripts/run_bench.sh
+./scripts/wrk_test.sh
+````
+### Using K6
+```bash
+./scripts/k6_test.sh
 ````
 
 ## Cleanup the volume and container 
